@@ -2,21 +2,28 @@ import streamlit as st
 import pandas as pd
 from rapidfuzz import process, fuzz
 
-st.title("Fuzzy Matching App with Flexible Column Selection and Improved Error Handling")
+st.title("Flexible Fuzzy Matching App with Column Selection and Controlled Execution")
 
 # File upload widgets
 primary_file = st.file_uploader("Upload Primary List CSV", type="csv")
 checklist_file = st.file_uploader("Upload Checklist CSV", type="csv")
 
-# Function to read CSV with error handling
-def read_csv_file(file):
+# Function to read CSV with optional header inference
+def read_csv_file(file, infer_headers=True):
     try:
-        # Attempt to read file with default UTF-8 encoding
-        df = pd.read_csv(file, encoding='utf-8')
+        # Read CSV with or without headers based on input flag
+        if infer_headers:
+            df = pd.read_csv(file, encoding='utf-8')
+        else:
+            df = pd.read_csv(file, encoding='utf-8', header=None)
+            df.columns = [f"Column_{i}" for i in range(len(df.columns))]  # Assign generic column names
     except UnicodeDecodeError:
-        # Fallback to 'latin1' encoding if UTF-8 fails
         try:
-            df = pd.read_csv(file, encoding='latin1')
+            if infer_headers:
+                df = pd.read_csv(file, encoding='latin1')
+            else:
+                df = pd.read_csv(file, encoding='latin1', header=None)
+                df.columns = [f"Column_{i}" for i in range(len(df.columns))]
         except Exception as e:
             st.error(f"Failed to read the file due to encoding issues: {e}")
             return None
@@ -29,9 +36,12 @@ def read_csv_file(file):
     return df
 
 if primary_file and checklist_file:
+    # Prompt user to specify if primary file has headers
+    primary_has_headers = st.checkbox("Primary list has headers", value=True)
+    
     # Load primary and checklist files
-    primary_df = read_csv_file(primary_file)
-    checklist_df = read_csv_file(checklist_file)
+    primary_df = read_csv_file(primary_file, infer_headers=primary_has_headers)
+    checklist_df = read_csv_file(checklist_file, infer_headers=True)
 
     # Ensure files are loaded correctly
     if primary_df is not None and checklist_df is not None:
@@ -39,14 +49,13 @@ if primary_file and checklist_file:
         st.write("Primary List Preview:", primary_df.head())
         st.write("Checklist Preview:", checklist_df.head())
 
-        # Check if dataframes have columns before proceeding
+        # Select columns to use for matching if available
         if not primary_df.columns.empty and not checklist_df.columns.empty:
-            # Select columns to use for matching
             primary_column = st.selectbox("Select column from Primary List to match", primary_df.columns)
             checklist_column = st.selectbox("Select column from Checklist to match", checklist_df.columns)
 
-            # Only perform matching if columns are selected
-            if primary_column and checklist_column:
+            # Button to trigger matching
+            if st.button("Run Matching"):
                 # Set matching threshold
                 threshold = st.slider("Set Similarity Threshold", 0, 100, 80)
 
@@ -80,7 +89,7 @@ if primary_file and checklist_file:
                 # Download matched results as CSV
                 st.download_button("Download Results", primary_df.to_csv(index=False), "matched_results.csv")
             else:
-                st.warning("Please select columns from both the primary and checklist files to match.")
+                st.info("Click 'Run Matching' to start the matching process.")
         else:
             st.error("The uploaded files do not contain any columns. Please check the files.")
 else:
