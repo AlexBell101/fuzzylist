@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from rapidfuzz import process, fuzz
 
-st.title("Fuzzy Matching App with Correct Header and Encoding Handling")
+st.title("Fuzzy Matching App with Enhanced Error Handling in Matching")
 
 # File upload widgets
 primary_file = st.file_uploader("Upload Primary List CSV", type="csv")
@@ -55,17 +55,22 @@ if primary_file and checklist_file:
 
                 # Ensure selected columns are not empty
                 if primary_df[primary_column].notna().any() and checklist_df[checklist_column].notna().any():
-                    # Function to perform fuzzy matching
+                    # Convert columns to string and clean up missing values
+                    primary_names = primary_df[primary_column].astype(str).fillna("").tolist()
+                    checklist_names = checklist_df[checklist_column].astype(str).fillna("").tolist()
+
+                    # Function to perform fuzzy matching with improved error handling
                     def fuzzy_match(primary_names, checklist_names, threshold=80):
                         matched_flags = []
                         matched_names = []
                         for name in primary_names:
-                            if pd.isna(name):  # Handle missing values
+                            if not isinstance(name, str) or name.strip() == "":
+                                # Handle non-string or empty inputs
                                 matched_flags.append("Not Matched")
                                 matched_names.append(None)
                                 continue
                             match, score = process.extractOne(name, checklist_names, scorer=fuzz.ratio)
-                            if score >= threshold:
+                            if match and score >= threshold:
                                 matched_flags.append("Matched")
                                 matched_names.append(match)  # Optional: Store matched name
                             else:
@@ -76,9 +81,6 @@ if primary_file and checklist_file:
                     st.write("Performing fuzzy matching...")
 
                     # Perform fuzzy matching
-                    primary_names = primary_df[primary_column].astype(str).tolist()
-                    checklist_names = checklist_df[checklist_column].astype(str).tolist()
-
                     matched_flags, matched_names = fuzzy_match(primary_names, checklist_names, threshold)
                     
                     # Add match results to primary dataframe
