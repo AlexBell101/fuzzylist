@@ -2,19 +2,20 @@ import streamlit as st
 import pandas as pd
 from rapidfuzz import process, fuzz
 
-st.title("Flexible Fuzzy Matching App with Accurate Column Selection")
+st.title("Fuzzy Matching App with Accurate Header Recognition")
 
 # File upload widgets
 primary_file = st.file_uploader("Upload Primary List CSV", type="csv")
 checklist_file = st.file_uploader("Upload Checklist CSV", type="csv")
 
-# Function to read CSV files
-def read_csv_file(file):
+# Function to read CSV files with optional header inference
+def read_csv_file(file, header_option='infer'):
     try:
-        df = pd.read_csv(file, encoding='utf-8')
+        # Read the CSV file with specified header option ('infer' for auto-detection)
+        df = pd.read_csv(file, encoding='utf-8', header=header_option)
     except UnicodeDecodeError:
         try:
-            df = pd.read_csv(file, encoding='latin1')
+            df = pd.read_csv(file, encoding='latin1', header=header_option)
         except Exception as e:
             st.error(f"Failed to read the file due to encoding issues: {e}")
             return None
@@ -27,9 +28,13 @@ def read_csv_file(file):
     return df
 
 if primary_file and checklist_file:
+    # Option to indicate if primary file has headers
+    primary_has_headers = st.checkbox("Primary list has headers", value=True)
+    header_option = 0 if primary_has_headers else None
+    
     # Load primary and checklist files
-    primary_df = read_csv_file(primary_file)
-    checklist_df = read_csv_file(checklist_file)
+    primary_df = read_csv_file(primary_file, header_option=header_option)
+    checklist_df = read_csv_file(checklist_file, header_option=0)  # Assume checklist has headers
 
     # Ensure files are loaded correctly
     if primary_df is not None and checklist_df is not None:
@@ -37,19 +42,15 @@ if primary_file and checklist_file:
         st.write("Primary List Preview:", primary_df.head())
         st.write("Checklist Preview:", checklist_df.head())
 
-        # Ensure the DataFrames have columns
+        # Check if DataFrames have columns before proceeding
         if not primary_df.columns.empty and not checklist_df.columns.empty:
-            # Ensure columns are presented as strings in the dropdown
-            primary_column = st.selectbox(
-                "Select column from Primary List to match",
-                options=primary_df.columns.tolist(),
-                format_func=lambda x: str(x)  # Ensure correct display
-            )
-            checklist_column = st.selectbox(
-                "Select column from Checklist to match",
-                options=checklist_df.columns.tolist(),
-                format_func=lambda x: str(x)  # Ensure correct display
-            )
+            # Use only string representation for column names
+            primary_columns = primary_df.columns.astype(str)
+            checklist_columns = checklist_df.columns.astype(str)
+
+            # Select columns to use for matching
+            primary_column = st.selectbox("Select column from Primary List to match", primary_columns)
+            checklist_column = st.selectbox("Select column from Checklist to match", checklist_columns)
 
             # Button to trigger matching
             if st.button("Run Matching"):
