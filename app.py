@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from rapidfuzz import process, fuzz
 
-st.title("Fuzzy Matching App - Enhanced File Handling")
+st.title("Fuzzy Matching App - Enhanced File Handling and Parsing")
 
 # File upload widgets
 primary_file = st.file_uploader("Upload Primary List CSV (with Account Name, Owner, Region, and SFDC ID)", type="csv")
@@ -11,20 +11,29 @@ checklist_file = st.file_uploader("Upload Checklist CSV (with Account Name only)
 # Function to read CSV with error handling
 def read_csv_file(file):
     try:
-        df = pd.read_csv(file, encoding='utf-8')
-        st.success("File loaded successfully with UTF-8 encoding.")
+        # Read CSV, assuming there is a header; if none, infer columns
+        df = pd.read_csv(file, encoding='utf-8', error_bad_lines=False)
+        if df.empty:
+            st.warning("The uploaded file is empty. Please upload a valid CSV file.")
+            return None
+        return df
     except UnicodeDecodeError:
         st.warning("UTF-8 encoding failed. Trying 'latin1' encoding...")
         try:
-            df = pd.read_csv(file, encoding='latin1')
-            st.success("File loaded successfully with 'latin1' encoding.")
+            df = pd.read_csv(file, encoding='latin1', error_bad_lines=False)
+            if df.empty:
+                st.warning("The uploaded file is empty or unreadable. Please check the file.")
+                return None
+            return df
         except Exception as e:
-            st.error(f"Failed to read the file. Error: {e}")
+            st.error(f"Failed to read the file with 'latin1' encoding. Error: {e}")
             return None
+    except pd.errors.EmptyDataError:
+        st.error("The uploaded file appears to have no data or is not a valid CSV.")
+        return None
     except Exception as e:
         st.error(f"An error occurred while reading the file: {e}")
         return None
-    return df
 
 if primary_file and checklist_file:
     # Read primary and checklist files
@@ -56,7 +65,7 @@ if primary_file and checklist_file:
 
         st.write("Performing fuzzy matching...")
 
-        # Perform fuzzy matching
+        # Check if 'Account Name' column exists in both DataFrames
         if 'Account Name' in primary_df.columns and 'Account Name' in checklist_df.columns:
             primary_names = primary_df['Account Name'].tolist()
             checklist_names = checklist_df['Account Name'].tolist()
