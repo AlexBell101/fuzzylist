@@ -2,18 +2,18 @@ import streamlit as st
 import pandas as pd
 from rapidfuzz import process, fuzz
 
-st.title("Fuzzy Matching App with Accurate Header Recognition")
+st.title("Fuzzy Matching App with Correct Header and Encoding Handling")
 
 # File upload widgets
 primary_file = st.file_uploader("Upload Primary List CSV", type="csv")
 checklist_file = st.file_uploader("Upload Checklist CSV", type="csv")
 
-# Function to read CSV files with optional header inference
-def read_csv_file(file, header_option='infer'):
+# Function to read CSV files with specified encoding
+def read_csv_file(file, header_option='infer', encoding='utf-8'):
     try:
-        # Read the CSV file with specified header option ('infer' for auto-detection)
-        df = pd.read_csv(file, encoding='utf-8', header=header_option)
+        df = pd.read_csv(file, encoding=encoding, header=header_option)
     except UnicodeDecodeError:
+        st.warning("UTF-8 encoding failed. Trying 'latin1' encoding...")
         try:
             df = pd.read_csv(file, encoding='latin1', header=header_option)
         except Exception as e:
@@ -28,13 +28,9 @@ def read_csv_file(file, header_option='infer'):
     return df
 
 if primary_file and checklist_file:
-    # Option to indicate if primary file has headers
-    primary_has_headers = st.checkbox("Primary list has headers", value=True)
-    header_option = 0 if primary_has_headers else None
-    
-    # Load primary and checklist files
-    primary_df = read_csv_file(primary_file, header_option=header_option)
-    checklist_df = read_csv_file(checklist_file, header_option=0)  # Assume checklist has headers
+    # Load primary and checklist files with 'latin1' encoding as needed
+    primary_df = read_csv_file(primary_file, header_option=0, encoding='latin1')
+    checklist_df = read_csv_file(checklist_file, header_option=0, encoding='utf-8')  # Assuming checklist uses 'utf-8'
 
     # Ensure files are loaded correctly
     if primary_df is not None and checklist_df is not None:
@@ -44,7 +40,7 @@ if primary_file and checklist_file:
 
         # Check if DataFrames have columns before proceeding
         if not primary_df.columns.empty and not checklist_df.columns.empty:
-            # Use only string representation for column names
+            # Use only string representation for column names to avoid issues
             primary_columns = primary_df.columns.astype(str)
             checklist_columns = checklist_df.columns.astype(str)
 
