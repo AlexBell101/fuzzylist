@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from rapidfuzz import process, fuzz
 
-st.title("Fuzzy Matching App with Enhanced Error Handling in Matching")
+st.title("Fuzzy Matching App with Enhanced Error Handling")
 
 # File upload widgets
 primary_file = st.file_uploader("Upload Primary List CSV", type="csv")
@@ -59,22 +59,27 @@ if primary_file and checklist_file:
                     primary_names = primary_df[primary_column].astype(str).fillna("").tolist()
                     checklist_names = checklist_df[checklist_column].astype(str).fillna("").tolist()
 
-                    # Function to perform fuzzy matching with improved error handling
+                    # Function to perform fuzzy matching with enhanced error handling
                     def fuzzy_match(primary_names, checklist_names, threshold=80):
                         matched_flags = []
                         matched_names = []
                         for name in primary_names:
+                            # Clean and validate the input string
                             if not isinstance(name, str) or name.strip() == "":
-                                # Handle non-string or empty inputs
                                 matched_flags.append("Not Matched")
                                 matched_names.append(None)
                                 continue
-                            match, score = process.extractOne(name, checklist_names, scorer=fuzz.ratio)
-                            if match and score >= threshold:
-                                matched_flags.append("Matched")
-                                matched_names.append(match)  # Optional: Store matched name
-                            else:
-                                matched_flags.append("Not Matched")
+                            try:
+                                match, score = process.extractOne(name, checklist_names, scorer=fuzz.ratio)
+                                if match and score >= threshold:
+                                    matched_flags.append("Matched")
+                                    matched_names.append(match)  # Optional: Store matched name
+                                else:
+                                    matched_flags.append("Not Matched")
+                                    matched_names.append(None)
+                            except Exception as e:
+                                st.error(f"Error during matching: {e}")
+                                matched_flags.append("Error")
                                 matched_names.append(None)
                         return matched_flags, matched_names
 
