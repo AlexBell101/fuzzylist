@@ -49,7 +49,7 @@ if primary_file and checklist_file:
         st.write("Primary List Preview:", primary_df.head())
         st.write("Checklist Preview:", checklist_df.head())
 
-        # Select columns to use for matching if available
+        # Check if dataframes have columns before proceeding
         if not primary_df.columns.empty and not checklist_df.columns.empty:
             primary_column = st.selectbox("Select column from Primary List to match", primary_df.columns)
             checklist_column = st.selectbox("Select column from Checklist to match", checklist_df.columns)
@@ -59,35 +59,43 @@ if primary_file and checklist_file:
                 # Set matching threshold
                 threshold = st.slider("Set Similarity Threshold", 0, 100, 80)
 
-                # Function to perform fuzzy matching
-                def fuzzy_match(primary_names, checklist_names, threshold=80):
-                    matched_flags = []
-                    matched_names = []
-                    for name in primary_names:
-                        match, score = process.extractOne(name, checklist_names, scorer=fuzz.ratio)
-                        if score >= threshold:
-                            matched_flags.append("Matched")
-                            matched_names.append(match)  # Optional: Store matched name
-                        else:
-                            matched_flags.append("Not Matched")
-                            matched_names.append(None)
-                    return matched_flags, matched_names
+                # Ensure selected columns are not empty
+                if primary_df[primary_column].notna().any() and checklist_df[checklist_column].notna().any():
+                    # Function to perform fuzzy matching
+                    def fuzzy_match(primary_names, checklist_names, threshold=80):
+                        matched_flags = []
+                        matched_names = []
+                        for name in primary_names:
+                            if pd.isna(name):  # Handle missing values
+                                matched_flags.append("Not Matched")
+                                matched_names.append(None)
+                                continue
+                            match, score = process.extractOne(name, checklist_names, scorer=fuzz.ratio)
+                            if score >= threshold:
+                                matched_flags.append("Matched")
+                                matched_names.append(match)  # Optional: Store matched name
+                            else:
+                                matched_flags.append("Not Matched")
+                                matched_names.append(None)
+                        return matched_flags, matched_names
 
-                st.write("Performing fuzzy matching...")
+                    st.write("Performing fuzzy matching...")
 
-                # Perform fuzzy matching
-                primary_names = primary_df[primary_column].astype(str).tolist()
-                checklist_names = checklist_df[checklist_column].astype(str).tolist()
+                    # Perform fuzzy matching
+                    primary_names = primary_df[primary_column].astype(str).tolist()
+                    checklist_names = checklist_df[checklist_column].astype(str).tolist()
 
-                matched_flags, matched_names = fuzzy_match(primary_names, checklist_names, threshold)
-                
-                # Add match results to primary dataframe
-                primary_df['Matched'] = matched_flags
-                primary_df['Matched Checklist Name'] = matched_names  # Optional: View matched name
-                st.write("Matching Results:", primary_df)
+                    matched_flags, matched_names = fuzzy_match(primary_names, checklist_names, threshold)
+                    
+                    # Add match results to primary dataframe
+                    primary_df['Matched'] = matched_flags
+                    primary_df['Matched Checklist Name'] = matched_names  # Optional: View matched name
+                    st.write("Matching Results:", primary_df)
 
-                # Download matched results as CSV
-                st.download_button("Download Results", primary_df.to_csv(index=False), "matched_results.csv")
+                    # Download matched results as CSV
+                    st.download_button("Download Results", primary_df.to_csv(index=False), "matched_results.csv")
+                else:
+                    st.error("Selected columns contain no data to match. Please check your data.")
             else:
                 st.info("Click 'Run Matching' to start the matching process.")
         else:
