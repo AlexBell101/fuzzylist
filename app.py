@@ -12,7 +12,7 @@ checklist_file = st.file_uploader("Upload Checklist CSV (with Account Name only)
 def read_csv_file(file):
     try:
         # Read CSV, assuming there is a header; if none, infer columns
-        df = pd.read_csv(file, encoding='utf-8', error_bad_lines=False)
+        df = pd.read_csv(file, encoding='utf-8', on_bad_lines='skip')
         if df.empty:
             st.warning("The uploaded file is empty. Please upload a valid CSV file.")
             return None
@@ -20,7 +20,7 @@ def read_csv_file(file):
     except UnicodeDecodeError:
         st.warning("UTF-8 encoding failed. Trying 'latin1' encoding...")
         try:
-            df = pd.read_csv(file, encoding='latin1', error_bad_lines=False)
+            df = pd.read_csv(file, encoding='latin1', on_bad_lines='skip')
             if df.empty:
                 st.warning("The uploaded file is empty or unreadable. Please check the file.")
                 return None
