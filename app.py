@@ -70,10 +70,17 @@ if primary_file and checklist_file:
                                 matched_names.append(None)
                                 continue
                             try:
-                                match, score = process.extractOne(name, checklist_names, scorer=fuzz.ratio)
-                                if match and score >= threshold:
-                                    matched_flags.append("Matched")
-                                    matched_names.append(match)  # Optional: Store matched name
+                                # Extract match and handle cases where additional values are returned
+                                match_result = process.extractOne(name, checklist_names, scorer=fuzz.ratio)
+                                if match_result:
+                                    match = match_result[0]  # Get the matched string
+                                    score = match_result[1]  # Get the score
+                                    if score >= threshold:
+                                        matched_flags.append("Matched")
+                                        matched_names.append(match)  # Store matched name
+                                    else:
+                                        matched_flags.append("Not Matched")
+                                        matched_names.append(None)
                                 else:
                                     matched_flags.append("Not Matched")
                                     matched_names.append(None)
