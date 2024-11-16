@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from rapidfuzz import process, fuzz
 
-st.title("Fuzzy Matching App with Visible Matching Quality Slider")
+st.title("Fuzzy Matching App with Improved Matching Logic")
 
 # File upload widgets
 primary_file = st.file_uploader("Upload Primary List CSV", type="csv")
@@ -48,7 +48,7 @@ if primary_file and checklist_file:
             primary_column = st.selectbox("Select column from Primary List to match", primary_columns)
             checklist_column = st.selectbox("Select column from Checklist to match", checklist_columns)
 
-            # Slider for setting matching threshold (moved outside button condition)
+            # Slider for setting matching threshold
             threshold = st.slider("Set Matching Quality Threshold", 0, 100, 80)
 
             # Button to trigger matching
@@ -59,11 +59,7 @@ if primary_file and checklist_file:
                     primary_names = primary_df[primary_column].astype(str).fillna("").tolist()
                     checklist_names = checklist_df[checklist_column].astype(str).fillna("").tolist()
 
-                    # Debug: Print sample data for validation
-                    st.write("Sample of primary names:", primary_names[:5])
-                    st.write("Sample of checklist names:", checklist_names[:5])
-
-                    # Function to perform fuzzy matching with enhanced tuple handling
+                    # Function to perform fuzzy matching
                     def fuzzy_match(primary_names, checklist_names, threshold=80):
                         matched_flags = []
                         matched_names = []
@@ -79,8 +75,6 @@ if primary_file and checklist_file:
                                 if match_result:
                                     match = match_result[0]  # Get the matched string
                                     score = match_result[1]  # Get the score
-                                    if len(match_result) > 2:
-                                        st.write(f"Additional metadata detected for '{name}': {match_result[2:]}")
                                     if score >= threshold:
                                         matched_flags.append("Matched")
                                         matched_names.append(match)  # Store matched name
@@ -95,8 +89,6 @@ if primary_file and checklist_file:
                                 matched_flags.append("Error")
                                 matched_names.append(None)
                         return matched_flags, matched_names
-
-                    st.write("Performing fuzzy matching...")
 
                     # Perform fuzzy matching
                     matched_flags, matched_names = fuzzy_match(primary_names, checklist_names, threshold)
